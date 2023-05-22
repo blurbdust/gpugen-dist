@@ -2,8 +2,11 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
 	"fmt"
+	"github.com/bluekeyes/go-gitdiff/gitdiff"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -207,30 +210,61 @@ func runCheck(dir string, prog string) int {
 	} else {
 		fmt.Println("The byte sequences do not match. Checking possibility of patch needed")
 		// TODO: If Linux, patch to old.netntlmv1.cl and rt.cl
-		/*
-			patch, err := os.Open("changes.patch")
-			if err != nil {
-			    log.Fatal(err)
-			}
 
-			// files is a slice of *gitdiff.File describing the files changed in the patch
-			// preamble is a string of the content of the patch before the first file
-			files, preamble, err := gitdiff.Parse(patch)
-			if err != nil {
-			    log.Fatal(err)
-			}
+		oPath := filepath.Join("CL", "old.netntlmv1.cl")
+		nPath := filepath.Join("CL", "netntlmv1.cl")
+		bPath := filepath.Join("CL", "bad.netntlmv1.cl")
+		rPath := filepath.Join("CL", "rt.cl")
 
-			code, err := os.Open("code.go")
-			if err != nil {
-			    log.Fatal(err)
-			}
+		err := os.Rename(nPath, bPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = os.Rename(oPath, nPath)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-			// apply the changes in the patch to a source file
-			var output bytes.Buffer
-			if err := gitdiff.Apply(&output, code, files[0]); err != nil {
-			    log.Fatal(err)
-			}
-		*/
+		patchURL := "https://gist.githubusercontent.com/blurbdust/77bddb721489fa4359b7af17f68321a0/raw/9b6cafef6f9d2452dea57b6a2ece51eed75c3448/rt.patch"
+		tmpFile, err := os.CreateTemp("", "rt.patch")
+		if err != nil {
+			panic(err)
+		}
+		defer os.Remove(tmpFile.Name()) // Remove the temporary file when we're done with it
+
+		// Download the zip file and save it to the temporary file
+		resp, err := http.Get(patchURL)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+		_, err = io.Copy(tmpFile, resp.Body)
+		if err != nil {
+			panic(err)
+		}
+
+		patch, err := os.Open("rt.patch")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// files is a slice of *gitdiff.File describing the files changed in the patch
+		// preamble is a string of the content of the patch before the first file
+		files, _, err := gitdiff.Parse(patch)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		code, err := os.Open(rPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// apply the changes in the patch to a source file
+		var output bytes.Buffer
+		if err := gitdiff.Apply(&output, code, files[0]); err != nil {
+			log.Fatal(err)
+		}
 		computeUnitsInt = helpCheck(dir, prog, filePath, cdir, computeUnitsInt)
 
 		// Read the contents of the file into a byte slice
@@ -238,9 +272,6 @@ func runCheck(dir string, prog string) int {
 		if err != nil {
 			panic(err)
 		}
-
-		// Define the desired byte sequence
-		desiredBytes := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xcd, 0x72, 0xdf, 0xc6, 0xe6, 0xd0, 0x40, 0x00}
 
 		// Compare the byte slices
 		if bytesEqual(data, desiredBytes) {
