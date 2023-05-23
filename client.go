@@ -233,32 +233,18 @@ func runCheck(dir string, prog string) int {
 			log.Fatal(err)
 		}
 
-		patchURL := "https://gist.githubusercontent.com/blurbdust/77bddb721489fa4359b7af17f68321a0/raw/9b6cafef6f9d2452dea57b6a2ece51eed75c3448/rt.patch"
-		tmpFile, err := os.CreateTemp("", "rt.patch")
-		if err != nil {
-			panic(err)
-		}
-		defer os.Remove(tmpFile.Name()) // Remove the temporary file when we're done with it
+		patchURL := "https://gist.githubusercontent.com/blurbdust/77bddb721489fa4359b7af17f68321a0/raw/ffd0b23ed0972dd609d816ee9f3e6a064a59504a/rt.patch"
 
-		// Download the zip file and save it to the temporary file
+		// Download the patch file and save it to the temporary file
 		resp, err := http.Get(patchURL)
 		if err != nil {
 			panic(err)
 		}
-		defer resp.Body.Close()
-		_, err = io.Copy(tmpFile, resp.Body)
-		if err != nil {
-			panic(err)
-		}
-
-		patch, err := os.Open("rt.patch")
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		// files is a slice of *gitdiff.File describing the files changed in the patch
 		// preamble is a string of the content of the patch before the first file
-		files, _, err := gitdiff.Parse(patch)
+		files, _, err := gitdiff.Parse(resp.Body)
+		defer resp.Body.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -273,6 +259,13 @@ func runCheck(dir string, prog string) int {
 		if err := gitdiff.Apply(&output, code, files[0]); err != nil {
 			log.Fatal(err)
 		}
+		code.Close()
+
+		err = os.WriteFile(rPath, output.Bytes(), 0644)
+		if err != nil {
+			panic(err)
+		}
+
 		computeUnitsInt = helpCheck(dir, prog, filePath, cdir, computeUnitsInt)
 
 		// Read the contents of the file into a byte slice
