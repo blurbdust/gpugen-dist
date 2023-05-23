@@ -125,6 +125,14 @@ func helpCheck(dir string, prog string, filePath string, cdir string, computeUni
 		panic(err)
 	}
 
+	// double check execute bit is set on Linux
+	if runtime.GOOS == "linux" {
+		err := os.Chmod(prog, 0775)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	// Start the thing.exe process
 	cmd := exec.Command(prog, "netntlmv1", "byte", "7", "7", "0", "2", "1", "0")
 
