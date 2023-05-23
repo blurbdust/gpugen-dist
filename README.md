@@ -16,6 +16,10 @@ Please don't DoS the index server, it's fragile.
 ## How To
 `.\client.winx64.exe` or `./client_linx64` it should be that easy 
 
+## How To without Wrappers
+`./crackalack_gen netntlmv1 byte 7 7 0 300000 134217727 0`
+The last `0` is the table index which you will either increment up to 4096 but the server written in Go [here](https://github.com/blurbdust/gpugen-dist/blob/main/server.go) does the checkout process to not duplicate work. 
+
 ## Compatibility
 The tables should be compatible with `rcrack` and the recreation [here](https://github.com/inAudible-NG/RainbowCrack-NG). I do already have plugins written and will release those closer to completion of generation.
 
