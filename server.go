@@ -62,7 +62,7 @@ func (p *NumberPool) Checkout(addr string) (int, error) {
 
 	lastCheckedOut, ok := p.checkoutHistory[addr]
 	if ok && time.Since(lastCheckedOut) < 72*time.Hour {
-		return 0, fmt.Errorf("Error! IP address %s has already checked out a number in the last 24 hours", addr)
+		return 0, fmt.Errorf("Error! IP address %s has already checked out a number in the last 72 hours", addr)
 	}
 
 	// Check if there are any available numbers
@@ -153,7 +153,7 @@ func (p *NumberPool) LoadFromFile() error {
 }
 
 func main() {
-	ticker := time.NewTicker(24 * time.Hour)
+	ticker := time.NewTicker(72 * time.Hour)
 	defer ticker.Stop()
 
 	// Start the HTTP server
