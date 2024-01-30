@@ -61,7 +61,7 @@ func (p *NumberPool) Checkout(addr string) (int, error) {
 	defer p.mu.Unlock()
 
 	lastCheckedOut, ok := p.checkoutHistory[addr]
-	if ok && time.Since(lastCheckedOut) < 24*time.Hour {
+	if ok && time.Since(lastCheckedOut) < 72*time.Hour {
 		return 0, fmt.Errorf("Error! IP address %s has already checked out a number in the last 24 hours", addr)
 	}
 
@@ -90,7 +90,7 @@ func (p *NumberPool) ReleaseExpired() {
 	defer p.mu.Unlock()
 
 	for ip, checkoutTime := range p.checkoutHistory {
-		if time.Since(checkoutTime) >= 20*time.Hour {
+		if time.Since(checkoutTime) >= 72*time.Hour {
 			num := p.checkoutAt[checkoutTime]
 			tmp := make([]int, 1)
 			tmp[0] = p.checkoutAt[checkoutTime]
@@ -98,7 +98,7 @@ func (p *NumberPool) ReleaseExpired() {
 			delete(p.checkedOut, num)
 			delete(p.checkoutHistory, ip)
 			delete(p.checkoutAt, checkoutTime)
-			println("Cleared stale checkout for ", num)
+			fmt.Println("Cleared stale checkout for ", num)
 		}
 	}
 }
@@ -158,7 +158,7 @@ func main() {
 
 	// Start the HTTP server
 	go func() {
-		if err := http.ListenAndServe(":8080", http.HandlerFunc(handler)); err != nil {
+		if err := http.ListenAndServe(":65080", http.HandlerFunc(handler)); err != nil {
 			fmt.Printf("HTTP server error: %s\n", err)
 			os.Exit(1)
 		}
@@ -213,6 +213,8 @@ func handleGet(w http.ResponseWriter, r *http.Request) {
 
 	// Write the number to the response
 	fmt.Fprintf(w, "%s\n", numStr)
+
+	fmt.Printf("GET %s : %d\n", r.RemoteAddr, numStr)
 }
 
 func (p *NumberPool) handleOptions(w http.ResponseWriter, r *http.Request) {
@@ -226,6 +228,7 @@ func (p *NumberPool) handleOptions(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%d\n", num)
 		// Send a success response
 		w.WriteHeader(http.StatusOK)
+		fmt.Printf("OPTIONS %s : %d\n", r.RemoteAddr, num)
 	}
 
 }
@@ -254,6 +257,7 @@ func (p *NumberPool) handlePut(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		fmt.Printf("PUT %s : %d\n", r.RemoteAddr, num)
 		fmt.Fprintf(w, "Saved data to file %s\n", fileName)
 		p.mu.Lock()
 		delete(p.checkoutHistory, addr)
@@ -264,3 +268,4 @@ func (p *NumberPool) handlePut(w http.ResponseWriter, r *http.Request) {
 	// Send a success response
 	w.WriteHeader(http.StatusOK)
 }
+
