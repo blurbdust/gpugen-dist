@@ -61,8 +61,8 @@ func (p *NumberPool) Checkout(addr string) (int, error) {
 	defer p.mu.Unlock()
 
 	lastCheckedOut, ok := p.checkoutHistory[addr]
-	if ok && time.Since(lastCheckedOut) < 72*time.Hour {
-		return 0, fmt.Errorf("Error! IP address %s has already checked out a number in the last 72 hours", addr)
+	if ok && time.Since(lastCheckedOut) < 6*time.Hour {
+		return 0, fmt.Errorf("Error! IP address %s has already checked out a number in the last 6 hours", addr)
 	}
 
 	// Check if there are any available numbers
